@@ -1,0 +1,65 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.boot_timeout = 600
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  config.vm.provider :libvirt do |lv|
+    lv.uri = "qemu:///system"
+    lv.video_type = "qxl"
+    lv.graphics_type = "spice"
+  end
+  # SERVER WINDOWS 2022
+  config.vm.define "dc-server" do |dc|
+    dc.vm.box = "gusztavvargadr/windows-server-2022-standard"
+    dc.vm.hostname = "DC-SERVER"
+
+    dc.vm.network "private_network",
+      ip: "192.168.56.10",
+      netmask: "255.255.255.0",
+      libvirt__network_name: "infra-net"
+
+    dc.vm.network "forwarded_port",
+      guest: 3389, host: 33890, id: "rdp",
+      auto_correct: true
+
+    dc.vm.provider :libvirt do |lv|
+      lv.memory = 4096
+      lv.cpus = 2
+      lv.loader = "/usr/share/edk2/ovmf/OVMF_CODE.fd"
+      lv.nic_model_type = "virtio"
+      lv.disk_bus = "virtio"
+    end
+
+    dc.vm.provision "shell",
+      path: "scripts/setup-dc.ps1",
+      powershell_elevated_interactive: false
+  end
+  
+  # CLIENT WINDOWS 11
+  config.vm.define "win-client" do |client|
+    client.vm.box = "gusztavvargadr/windows-11-25h2-enterprise"
+    client.vm.boot_timeout = 900
+
+    client.vm.network "private_network",
+      type: "dhcp",
+      libvirt__network_name: "infra-net"
+
+    client.vm.network "forwarded_port",
+      guest: 3389, host: 53390, id: "rdp-client",
+      auto_correct: true
+
+    client.vm.provider :libvirt do |lv|
+      lv.memory = 4096
+      lv.cpus = 2
+      lv.tpm_model = "tpm-crb"
+      lv.tpm_type = "emulator"
+      lv.tpm_version = "2.0"
+    end
+
+    client.vm.provision "shell",
+      inline: "netsh interface ip set dns 'Ethernet 2' static 192.168.56.10",
+      powershell_elevated_interactive: false
+  end
+end

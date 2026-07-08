@@ -1,0 +1,26 @@
+# Vagrant
+.vagrant/
+*.box
+*.iso
+packer_cache/
+
+# Windows
+*.iso
+*.vhd
+*.vhdx
+*.ova
+*.ovf
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
